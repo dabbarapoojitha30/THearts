@@ -1,16 +1,12 @@
-// db.js
-require("dotenv").config();
 const { Pool } = require("pg");
 
-// Use full DATABASE_URL with SSL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // Always enable SSL
+  ssl: { rejectUnauthorized: false } // required for Render Postgres
 });
 
-// Test connection immediately
-pool.query('SELECT current_database();')
-  .then(res => console.log("✅ Connected to database:", res.rows[0].current_database))
+pool.connect()
+  .then(() => console.log("✅ DB connected (Render Postgres)"))
   .catch(err => console.error("❌ DB connection error:", err));
 
 module.exports = pool;
