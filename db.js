@@ -1,16 +1,16 @@
+// db.js
 require("dotenv").config();
 const { Pool } = require("pg");
 
-// Use separate env vars instead of DATABASE_URL
+const isProd = process.env.NODE_ENV === "production";
+
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: Number(process.env.DB_PORT),
-  ssl: {
-    rejectUnauthorized: false // MUST have this for Render Postgres
-  }
+  ssl: isProd ? { rejectUnauthorized: false } : false
 });
 
 // Test connection
