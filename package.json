@@ -1,0 +1,31 @@
+{
+  "name": "pedechon",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^143.0.4",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.1",
+    "pg": "^8.18.0",
+    "puppeteer": "^24.37.4",
+    "puppeteer-core": "^24.37.4",
+    "uuid": "^13.0.0"
+  },
+  "description": "",
+  "main": "server.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}

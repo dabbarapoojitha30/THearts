@@ -1,0 +1,30 @@
+[
+  {
+    "patient_id": "PUTS-1",
+    "name": "Ganesh",
+    "age": "18y 9m 20d",
+    "sex": "Male",
+    "location": "Senthil Nursing Home, Puthukottai"
+  },
+  {
+    "patient_id": "PUTH-1",
+    "name": "hanuman",
+    "age": "19y 1m 16d",
+    "sex": "Male",
+    "location": "Hridya Cardiac Care, Puthukottai"
+  },
+  {
+    "patient_id": "DIN-1",
+    "name": "hanuman",
+    "age": "18y 9m 20d",
+    "sex": "Male",
+    "location": "Star Kids Hospital, Dindugul"
+  },
+  {
+    "patient_id": "PER-1",
+    "name": "Ram",
+    "age": "18y 9m 20d",
+    "sex": "Male",
+    "location": "Perambalur Cardiac Centre, Perambalur"
+  }
+]
