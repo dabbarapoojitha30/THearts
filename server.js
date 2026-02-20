@@ -5,10 +5,12 @@ const fs = require("fs");
 const path = require("path");
 const { body, validationResult } = require("express-validator");
 const pool = require("./db");
-const puppeteer = require("puppeteer");
-const chromium = require("@sparticuz/chromium");
 
+// Render-compatible Puppeteer
+const puppeteerCore = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium"); // works in cloud
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
@@ -61,7 +63,7 @@ const patientValidationRules = [
   body("phone2").optional({ checkFalsy: true }).matches(/^\d{10}$/)
 ];
 
-// ---------------- CRUD ----------------
+// ---------------- CRUD ROUTES ----------------
 app.post("/patients", patientValidationRules, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -94,6 +96,7 @@ app.post("/patients", patientValidationRules, async (req, res) => {
   }
 });
 
+// ---------------- PATCH / UPDATE ----------------
 app.patch("/patients/:id", patientValidationRules, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -122,6 +125,7 @@ app.patch("/patients/:id", patientValidationRules, async (req, res) => {
   }
 });
 
+// ---------------- GET PATIENTS ----------------
 app.get("/patients", async (_, res) => {
   try {
     const r = await pool.query("SELECT patient_id, name, age, location FROM patients ORDER BY created_at DESC");
@@ -166,48 +170,13 @@ app.delete("/patients/:id", async (req, res) => {
   }
 });
 
-// ---------------- GENERATE PATIENT ID ----------------
-app.get("/generate-patient-id", async (req, res) => {
-  const loc = req.query.location;
-  if (!loc) return res.status(400).json({ error: "Location required" });
-
-  const code = LOCATION_CODES[loc];
-  if (!code) return res.status(400).json({ error: "Invalid location" });
-
-  try {
-    const r = await pool.query(
-      "SELECT patient_id FROM patients WHERE patient_id LIKE $1 ORDER BY created_at DESC LIMIT 1",
-      [`${code}-%`]
-    );
-
-    let next = 1;
-    if (r.rows.length) {
-      const last = parseInt(r.rows[0].patient_id.split("-")[1]);
-      if (!isNaN(last)) next = last + 1;
-    }
-    res.json({ patient_id: `${code}-${next}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ---------------- GET ALL PATIENTS FOR FRONTEND ----------------
-app.get("/patients/all", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT patient_id, name, age, location FROM patients ORDER BY created_at DESC");
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-
-// ---------------- PUPPETEER SINGLETON ----------------
+// ---------------- PDF / PUPPETEER ----------------
 let browserInstance = null;
 async function getBrowser() {
   if (!browserInstance) {
     const isLocal = process.env.NODE_ENV !== "production";
-    browserInstance = await puppeteer.launch({
-      executablePath: isLocal ? puppeteer.executablePath() : await chromium.executablePath(),
+    browserInstance = await (isLocal ? require("puppeteer") : puppeteerCore).launch({
+      executablePath: isLocal ? require("puppeteer").executablePath() : await chromium.executablePath(),
       headless: true,
       args: ["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage"]
     });
@@ -215,7 +184,6 @@ async function getBrowser() {
   return browserInstance;
 }
 
-// ---------------- PDF GENERATION ----------------
 async function generatePDFFromHTML(fileName, data) {
   const htmlPath = path.join(publicDir, fileName);
   if (!fs.existsSync(htmlPath)) throw new Error("HTML template not found");
@@ -248,7 +216,6 @@ async function generatePDFFromHTML(fileName, data) {
   return pdf;
 }
 
-// ---------------- PDF ENDPOINT ----------------
 app.post("/generate-pdf", async (req, res) => {
   try {
     const pdf = await generatePDFFromHTML("report.html", req.body);
