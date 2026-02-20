@@ -4,24 +4,19 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const { body, validationResult } = require("express-validator");
-const pool = require("./db");
+const pool = require("./db"); // use DATABASE_URL with SSL
+const puppeteer = require("puppeteer");
+const chromium = require("@sparticuz/chromium");
 
-// Render-compatible Puppeteer
-const puppeteerCore = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium"); // works in cloud
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
-// ---------------- STATIC FILES ----------------
 const publicDir = path.join(__dirname, "public");
 app.use(express.static(publicDir));
 
-// ---------------- REDIRECT ROOT ----------------
 app.get("/", (req, res) => res.redirect("/login.html"));
 
-// ---------------- LOCATION CODES ----------------
 const LOCATION_CODES = {
   "Arthi Hospital, Kumbakonam": "KUM",
   "Senthil Nursing Home, Puthukottai": "PUTS",
@@ -32,7 +27,6 @@ const LOCATION_CODES = {
   "Pugazhini Hospital, Trichy": "TRI"
 };
 
-// ---------------- UTILITIES ----------------
 function calculateAge(dob) {
   const birth = new Date(dob);
   const today = new Date();
@@ -52,7 +46,6 @@ function formatDateForPDF(dateStr) {
   return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 }
 
-// ---------------- VALIDATION ----------------
 const patientValidationRules = [
   body("patient_id").trim().notEmpty(),
   body("name").trim().notEmpty(),
@@ -96,7 +89,6 @@ app.post("/patients", patientValidationRules, async (req, res) => {
   }
 });
 
-// ---------------- PATCH / UPDATE ----------------
 app.patch("/patients/:id", patientValidationRules, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -125,7 +117,6 @@ app.patch("/patients/:id", patientValidationRules, async (req, res) => {
   }
 });
 
-// ---------------- GET PATIENTS ----------------
 app.get("/patients", async (_, res) => {
   try {
     const r = await pool.query("SELECT patient_id, name, age, location FROM patients ORDER BY created_at DESC");
@@ -174,9 +165,8 @@ app.delete("/patients/:id", async (req, res) => {
 let browserInstance = null;
 async function getBrowser() {
   if (!browserInstance) {
-    const isLocal = process.env.NODE_ENV !== "production";
-    browserInstance = await (isLocal ? require("puppeteer") : puppeteerCore).launch({
-      executablePath: isLocal ? require("puppeteer").executablePath() : await chromium.executablePath(),
+    browserInstance = await puppeteer.launch({
+      executablePath: await chromium.executablePath(),
       headless: true,
       args: ["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage"]
     });
