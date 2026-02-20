@@ -129,6 +129,22 @@ app.get("/patients", async (_, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get("/patients/search", async (req, res) => {
+    try {
+        const nameQuery = req.query.name || "";
+        const result = await pool.query(
+            `SELECT patient_id, name, age, location 
+             FROM patients 
+             WHERE name ILIKE $1 
+             ORDER BY created_at DESC`,
+            [`%${nameQuery}%`]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get("/patients/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -183,21 +199,7 @@ app.get("/patients/all", async (req, res) => {
   }
 });
 
-app.get("/patients/search", async (req, res) => {
-    try {
-        const nameQuery = req.query.name || "";
-        const result = await pool.query(
-            `SELECT patient_id, name, age, location 
-             FROM patients 
-             WHERE name ILIKE $1 
-             ORDER BY created_at DESC`,
-            [`%${nameQuery}%`]
-        );
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+
 
 // ---------------- PUPPETEER SINGLETON ----------------
 let browserInstance = null;

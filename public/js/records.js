@@ -74,15 +74,98 @@ async function generatePDF(id, name) {
 
         if (!pdfRes.ok) throw new Error(await pdfRes.text());
 
-        const blob = await pdfRes.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Patient-${name.replace(/[^a-z0-9]/gi, '_')}-Report.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        const tableBody = document.querySelector("#patientsTable tbody");
+const searchInput = document.getElementById("searchId");
+const searchBtn = document.getElementById("searchBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+// ---------------- LOAD ALL PATIENTS ----------------
+async function loadPatients(name = "") {
+    const url = name 
+        ? `/patients/search?name=${encodeURIComponent(name)}`
+        : `/patients`;   // SAME endpoint admin uses
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        tableBody.innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+            tableBody.innerHTML = "<tr><td colspan='5'>No records found</td></tr>";
+            return;
+        }
+
+        data.forEach(p => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${p.patient_id}</td>
+                <td>${p.name}</td>
+                <td>${p.age || ""}</td>
+                <td>${p.location || ""}</td>
+                <td>
+                    <button class="btn btn-sm btn-success pdfBtn">PDF</button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+
+            tr.querySelector(".pdfBtn").onclick = () => generatePDF(p.patient_id, p.name);
+        });
+
+    } catch (err) {
+        console.error("Guest load error:", err);
+        tableBody.innerHTML = "<tr><td colspan='5'>Error loading data</td></tr>";
+    }
+}
+
+// ---------------- PDF ----------------
+async function generatePDF(id, name) {
+    try {
+        const res = await fetch(`/patients/${id}`);
+        const data = await res.json();
+
+        const pdfRes = await fetch('/generate-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+       const blob = await pdfRes.blob();
+const url = URL.createObjectURL(blob);
+
+const a = document.createElement('a');
+a.href = url;
+a.download = `${id}-${name.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+
+document.body.appendChild(a);
+a.click();
+a.remove();
+
+URL.revokeObjectURL(url);
+
+    } catch (err) {
+        alert("PDF generation failed");
+    }
+}
+
+// ---------------- SEARCH ----------------
+if (searchBtn) {
+    searchBtn.addEventListener("click", () => {
+        const name = searchInput.value.trim();
+        loadPatients(name);
+    });
+}
+
+// ---------------- RESET ----------------
+if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        loadPatients();
+    });
+}
+
+// Initial load
+loadPatients();
     } catch (err) {
         alert("PDF failed: " + err.message);
         console.error(err);
