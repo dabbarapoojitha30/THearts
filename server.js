@@ -27,6 +27,7 @@ const LOCATION_CODES = {
   "Pugazhini Hospital, Trichy": "TRI"
 };
 
+
 function calculateAge(dob) {
   const birth = new Date(dob);
   const today = new Date();
@@ -45,7 +46,34 @@ function formatDateForPDF(dateStr) {
   if (isNaN(d)) return "";
   return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 }
+// ------------------- AUTO-GENERATE PATIENT ID -------------------
+app.get("/generate-patient-id", async (req, res) => {
+    const loc = req.query.location;
+    if(!loc) return res.status(400).json({ error: "Location required" });
 
+    const code = LOCATION_CODES[loc];
+    if(!code) return res.status(400).json({ error: "Invalid location" });
+
+    try {
+        // Find the max sequence number for this location
+        const r = await pool.query(
+            "SELECT patient_id FROM patients WHERE location=$1 ORDER BY created_at DESC LIMIT 1",
+            [loc]
+        );
+
+        let seq = 1;
+        if(r.rows.length > 0){
+            const lastId = r.rows[0].patient_id; // e.g., KUM-5
+            const parts = lastId.split("-");
+            if(parts.length === 2) seq = parseInt(parts[1]) + 1;
+        }
+
+        res.json({ patient_id: `${code}-${seq}` });
+    } catch(err){
+        console.error(err);
+        res.status(500).json({ error: "Failed to generate patient ID" });
+    }
+});
 const patientValidationRules = [
   body("patient_id").trim().notEmpty(),
   body("name").trim().notEmpty(),
